@@ -93,13 +93,14 @@ class BanditManager:
         This will populate a list of baseline issues discovered from a previous
         run of bandit. Later this baseline can be used to filter out the result
         set, see filter_results.
+
+        :raises ValueError: if the baseline data cannot be parsed
         """
-        items = []
         try:
             jdata = json.loads(data)
             items = [issue.issue_from_dict(j) for j in jdata["results"]]
         except Exception as e:
-            LOG.warning("Failed to load baseline data: %s", e)
+            raise ValueError(f"Failed to load baseline data: {e}") from e
         self.baseline = items
 
     def filter_results(self, sev_filter, conf_filter):
@@ -429,13 +430,48 @@ def _compare_baseline_results(baseline, results):
     """Compare a baseline list of issues to list of results
 
     This function compares a baseline set of issues to a current set of issues
-    to find results that weren't present in the baseline.
+    to find results that weren't present in the baseline. Issues are matched
+    by content (including line number) and counted, so if the baseline
+    contains one copy of an issue and the results contain two identical
+    copies, the extra copy is reported as new.
 
     :param baseline: Baseline list of issues
     :param results: Current list of issues
     :return: List of unmatched issues
     """
-    return [a for a in results if a not in baseline]
+    baseline_counts = collections.Counter(
+        _issue_identity(item) for item in baseline
+    )
+    unmatched = []
+    for result in results:
+        identity = _issue_identity(result)
+        if baseline_counts[identity] > 0:
+            baseline_counts[identity] -= 1
+        else:
+            unmatched.append(result)
+    return unmatched
+
+
+def _issue_identity(issue):
+    """Build a hashable identity key for an issue for baseline comparison
+
+    This intentionally includes the line number (unlike Issue.__eq__), so
+    that an issue which moved to a different line is treated as a new
+    issue when comparing against a baseline.
+
+    :param issue: Issue to build the identity key for
+    :return: Hashable tuple identifying the issue
+    """
+    return (
+        issue.text,
+        issue.severity,
+        issue.cwe.id,
+        issue.confidence,
+        issue.fname,
+        issue.test,
+        issue.test_id,
+        issue.lineno,
+    )
 
 
 def _find_candidate_matches(unmatched_issues, results_list):

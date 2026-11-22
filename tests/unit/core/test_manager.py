@@ -167,14 +167,14 @@ class ManagerTests(testtools.TestCase):
         self.manager.populate_baseline(baseline_data)
         self.assertEqual(baseline_items, self.manager.baseline)
 
-    @mock.patch("logging.Logger.warning")
-    def test_populate_baseline_invalid_json(self, mock_logger_warning):
+    def test_populate_baseline_invalid_json(self):
         # Test populate_baseline with invalid JSON content
         baseline_data = """{"data": "bad"}"""
-        self.manager.populate_baseline(baseline_data)
+        self.assertRaises(
+            ValueError, self.manager.populate_baseline, baseline_data
+        )
         # Default value for manager.baseline is []
         self.assertEqual([], self.manager.baseline)
-        self.assertTrue(mock_logger_warning.called)
 
     def test_results_count(self):
         levels = [constants.LOW, constants.MEDIUM, constants.HIGH]
@@ -359,6 +359,26 @@ class ManagerTests(testtools.TestCase):
             manager._compare_baseline_results(
                 [issue_a, issue_b, issue_c], [issue_a, issue_b]
             ),
+        )
+
+        # a second identical copy of an issue is new when the baseline
+        # only contains one
+        issue_a_copy = self._get_issue_instance()
+        issue_a_copy.fname = "file1.py"
+        self.assertEqual(
+            [issue_a_copy],
+            manager._compare_baseline_results(
+                [issue_a], [issue_a, issue_a_copy]
+            ),
+        )
+
+        # an issue with the same content at a different line number is new
+        issue_d = self._get_issue_instance()
+        issue_d.fname = "file1.py"
+        issue_d.lineno = 99
+        self.assertEqual(
+            [issue_d],
+            manager._compare_baseline_results([issue_a], [issue_a, issue_d]),
         )
 
     def test_find_candidate_matches(self):

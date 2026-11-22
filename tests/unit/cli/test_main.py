@@ -238,9 +238,8 @@ class BanditCLIMainTests(testtools.TestCase):
     @mock.patch(
         "sys.argv", ["bandit", "-c", "bandit.yaml", "-b", "base.json", "test"]
     )
-    def test_main_baseline_ioerror(self):
-        # Test that bandit exits when encountering an IOError while reading
-        # baseline data
+    def test_main_baseline_invalid(self):
+        # Test that bandit exits when the baseline report cannot be loaded
         temp_directory = self.useFixture(fixtures.TempDir()).path
         os.chdir(temp_directory)
         with open("bandit.yaml", "w") as fd:
@@ -250,7 +249,7 @@ class BanditCLIMainTests(testtools.TestCase):
         with mock.patch(
             "bandit.core.manager.BanditManager.populate_baseline"
         ) as mock_mgr_pop_bl:
-            mock_mgr_pop_bl.side_effect = IOError
+            mock_mgr_pop_bl.side_effect = ValueError
             # assert a SystemExit with code 2
             self.assertRaisesRegex(SystemExit, "2", bandit.main)
 

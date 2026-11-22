@@ -641,9 +641,14 @@ def main():
         try:
             with open(args.baseline) as bl:
                 data = bl.read()
-                b_mgr.populate_baseline(data)
         except OSError:
-            LOG.warning("Could not open baseline report: %s", args.baseline)
+            LOG.error("Could not open baseline report: %s", args.baseline)
+            sys.exit(2)
+
+        try:
+            b_mgr.populate_baseline(data)
+        except ValueError as e:
+            LOG.error("Could not load baseline report: %s", e)
             sys.exit(2)
 
         if args.output_format not in baseline_formatters:
