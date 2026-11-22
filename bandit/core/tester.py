@@ -93,15 +93,15 @@ class BanditTester:
                             self.metrics.note_skipped_test()
                             continue
 
-                    self.results.append(result)
-
-                    LOG.debug("Issue identified by %s: %s", name, result)
                     sev = constants.RANKING.index(result.severity)
                     val = constants.RANKING_VALUES[result.severity]
                     scores["SEVERITY"][sev] += val
                     con = constants.RANKING.index(result.confidence)
                     val = constants.RANKING_VALUES[result.confidence]
                     scores["CONFIDENCE"][con] += val
+
+                    self.results.append(result)
+                    LOG.debug("Issue identified by %s: %s", name, result)
                 else:
                     nosec_tests_to_skip = self._get_nosecs_from_contexts(
                         temp_context

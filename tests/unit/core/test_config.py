@@ -69,6 +69,59 @@ class TestInit(testtools.TestCase):
             utils.ConfigError, f.name, config.BanditConfig, f.name
         )
 
+    def test_blacklist_level_normalized(self):
+        contents = textwrap.dedent(
+            """
+            profiles:
+                test:
+                    include:
+                        - blacklist_calls
+
+            blacklist_calls:
+                bad_name_sets:
+                    - pickle:
+                        qualnames: [pickle.loads]
+                        message: "{func} library appears to be in use."
+
+            blacklist_imports:
+                bad_import_sets:
+                    - telnet:
+                        imports: [telnetlib]
+                        level: high
+                        message: "{module} is considered insecure."
+            """
+        )
+        f = self.useFixture(TempFile(contents))
+        b_config = config.BanditConfig(f.name)
+
+        profile = b_config.get_option("profiles.test")
+        self.assertEqual("HIGH", profile["blacklist"]["Call"][0]["level"])
+
+    def test_blacklist_invalid_level(self):
+        contents = textwrap.dedent(
+            """
+            profiles:
+                test:
+                    include:
+                        - blacklist_imports
+
+            blacklist_imports:
+                bad_import_sets:
+                    - telnet:
+                        imports: [telnetlib]
+                        level: SEVERE
+                        message: "{module} is considered insecure."
+            """
+        )
+        f = self.useFixture(TempFile(contents))
+
+        self.assertRaisesRegex(
+            utils.ConfigError,
+            "Invalid blacklist level 'SEVERE'",
+            config.BanditConfig,
+            f.name,
+        )
+
 
 class TestGetOption(testtools.TestCase):
     def setUp(self):

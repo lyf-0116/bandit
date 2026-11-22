@@ -4,12 +4,47 @@
 # SPDX-License-Identifier: Apache-2.0
 import ast
 
+from bandit.core import constants
 from bandit.core import issue
+
+
+def normalize_level(level):
+    """Return a canonical blacklist severity level.
+
+    Blacklist data is often hand written or supplied by third party plugins,
+    so accept case differences but reject anything that isn't a known
+    severity. Silently defaulting unknown values would change the score and
+    therefore the exit threshold.
+
+    :param level: Severity level from a blacklist rule
+    :return: Canonical uppercase severity level
+    :raises ValueError: If the level is not a known severity
+    """
+    if not isinstance(level, str):
+        raise ValueError(
+            f"Invalid blacklist level {level!r}; expected one of "
+            f"{', '.join(constants.RANKING)}"
+        )
+
+    normalized = level.strip().upper()
+    if normalized not in constants.RANKING:
+        raise ValueError(
+            f"Invalid blacklist level {level!r}; expected one of "
+            f"{', '.join(constants.RANKING)}"
+        )
+    return normalized
+
+
+def normalize_check(check):
+    """Return a copy of a blacklist rule with its level normalized."""
+    normalized = dict(check)
+    normalized["level"] = normalize_level(check.get("level", "MEDIUM"))
+    return normalized
 
 
 def report_issue(check, name):
     return issue.Issue(
-        severity=check.get("level", "MEDIUM"),
+        severity=normalize_level(check.get("level", "MEDIUM")),
         confidence="HIGH",
         cwe=check.get("cwe", issue.Cwe.NOTSET),
         text=check["message"].replace("{name}", name),

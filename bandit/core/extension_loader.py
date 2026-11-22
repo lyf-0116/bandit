@@ -5,6 +5,7 @@ import sys
 
 from stevedore import extension
 
+from bandit.core import blacklisting
 from bandit.core import utils
 
 LOG = logging.getLogger(__name__)
@@ -74,7 +75,9 @@ class Manager:
         for item in blacklist:
             for key, val in item.plugin().items():
                 utils.check_ast_node(key)
-                self.blacklist.setdefault(key, []).extend(val)
+                self.blacklist.setdefault(key, []).extend(
+                    blacklisting.normalize_check(check) for check in val
+                )
 
         self.blacklist_by_id = {}
         self.blacklist_by_name = {}

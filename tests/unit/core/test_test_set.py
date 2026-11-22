@@ -167,3 +167,42 @@ class BanditTestSetTests(testtools.TestCase):
         self.assertNotIn("Import", blacklist._config)
         self.assertNotIn("ImportFrom", blacklist._config)
         self.assertEqual(1, len(blacklist._config["Call"]))
+
+    def test_profile_blacklist_normalizes_level(self):
+        data = [
+            {
+                "name": "marshal",
+                "id": "B302",
+                "cwe": issue.Cwe.DESERIALIZATION_OF_UNTRUSTED_DATA,
+                "qualnames": ["marshal.load"],
+                "message": "Deserialization with marshal is dangerous.",
+                "level": "high",
+            }
+        ]
+        profile = {"include": ["B001"], "blacklist": {"Call": data}}
+
+        ts = test_set.BanditTestSet(self.config, profile)
+        blacklist = ts.get_tests("Call")[0]
+
+        self.assertEqual("HIGH", blacklist._config["Call"][0]["level"])
+
+    def test_profile_blacklist_invalid_level(self):
+        data = [
+            {
+                "name": "marshal",
+                "id": "B302",
+                "cwe": issue.Cwe.DESERIALIZATION_OF_UNTRUSTED_DATA,
+                "qualnames": ["marshal.load"],
+                "message": "Deserialization with marshal is dangerous.",
+                "level": "SEVERE",
+            }
+        ]
+        profile = {"include": ["B001"], "blacklist": {"Call": data}}
+
+        self.assertRaisesRegex(
+            ValueError,
+            "Invalid blacklist level 'SEVERE'",
+            test_set.BanditTestSet,
+            self.config,
+            profile,
+        )

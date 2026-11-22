@@ -31,3 +31,25 @@ class BlacklistingTests(testtools.TestCase):
         self.assertEqual({}, issue_dict["issue_cwe"])
         self.assertEqual("HIGH", issue_dict["issue_confidence"])
         self.assertEqual("test name", issue_dict["issue_text"])
+
+    def test_report_issue_normalizes_level(self):
+        for level in ["high", "High", "hIgH", " high "]:
+            data = {
+                "level": level,
+                "message": "test {name}",
+                "id": "B000",
+            }
+
+            issue = blacklisting.report_issue(data, "name")
+            self.assertEqual("HIGH", issue.severity)
+
+    def test_report_issue_invalid_level(self):
+        data = {"level": "SEVERE", "message": "test {name}", "id": "B000"}
+
+        self.assertRaisesRegex(
+            ValueError,
+            "Invalid blacklist level 'SEVERE'",
+            blacklisting.report_issue,
+            data,
+            "name",
+        )

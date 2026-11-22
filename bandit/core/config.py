@@ -15,6 +15,7 @@ else:
     except ImportError:
         tomllib = None
 
+from bandit.core import blacklisting
 from bandit.core import constants
 from bandit.core import extension_loader
 from bandit.core import utils
@@ -174,6 +175,8 @@ class BanditConfig:
             for key, val in item.items():
                 val["name"] = key
                 val["message"] = val["message"].replace("{func}", "{name}")
+                if "level" in val:
+                    val["level"] = blacklisting.normalize_level(val["level"])
                 bad_calls_list.append(val)
 
         bad_imports = self.get_option("blacklist_imports") or {}
@@ -184,6 +187,8 @@ class BanditConfig:
                 val["message"] = val["message"].replace("{module}", "{name}")
                 val["qualnames"] = val["imports"]
                 del val["imports"]
+                if "level" in val:
+                    val["level"] = blacklisting.normalize_level(val["level"])
                 bad_imports_list.append(val)
 
         if bad_imports_list or bad_calls_list:
@@ -249,6 +254,17 @@ class BanditConfig:
                 if self._config.get(block) is None:
                     raise utils.ConfigError(message.format(key), path)
 
+        def _validate_blacklist_check(check):
+            try:
+                blacklisting.normalize_level(check.get("level", "MEDIUM"))
+            except ValueError as err:
+                raise utils.ConfigError(str(err), path)
+
+        def _validate_blacklist(blacklist):
+            for checks in blacklist.values():
+                for check in checks:
+                    _validate_blacklist_check(check)
+
         if "profiles" in self._config:
             legacy = True
             for profile in self._config["profiles"].values():
@@ -258,6 +274,15 @@ class BanditConfig:
                 _test("blacklist_imports", "blacklist_imports", inc, exc)
                 _test("blacklist_import_func", "blacklist_imports", inc, exc)
                 _test("blacklist_calls", "blacklist_calls", inc, exc)
+                _validate_blacklist(profile.get("blacklist") or {})
+
+        for block, key in (
+            ("blacklist_calls", "bad_name_sets"),
+            ("blacklist_imports", "bad_import_sets"),
+        ):
+            for item in (self.get_option(block) or {}).get(key, []) or []:
+                for check in item.values():
+                    _validate_blacklist_check(check)
 
         # show deprecation message
         if legacy:
