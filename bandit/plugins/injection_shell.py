@@ -10,8 +10,21 @@ from bandit.core import issue
 from bandit.core import test_properties as test
 
 # yuck, regex: starts with a windows drive letter (eg C:)
-# or one of our path delimiter characters (/, \, .)
-full_path_match = re.compile(r"^(?:[A-Za-z](?=\:)|[\\\/\.])")
+# or one of our path delimiter characters (/, \)
+full_path_match = re.compile(r"^(?:[A-Za-z](?=\:)|[\\\/])")
+
+# Functions in the os.spawn* family take a mode as their first argument,
+# the executable path is given in the second argument position.
+spawn_family = [
+    "os.spawnl",
+    "os.spawnle",
+    "os.spawnlp",
+    "os.spawnlpe",
+    "os.spawnv",
+    "os.spawnve",
+    "os.spawnvp",
+    "os.spawnvpe",
+]
 
 
 def _evaluate_shell_call(context):
@@ -65,16 +78,9 @@ def gen_config(name):
                 "os.execve",
                 "os.execvp",
                 "os.execvpe",
-                "os.spawnl",
-                "os.spawnle",
-                "os.spawnlp",
-                "os.spawnlpe",
-                "os.spawnv",
-                "os.spawnve",
-                "os.spawnvp",
-                "os.spawnvpe",
                 "os.startfile",
-            ],
+            ]
+            + spawn_family,
         }
 
 
@@ -633,6 +639,12 @@ def start_process_with_partial_path(context, config):
     This test will scan parameters of all methods in all sections. Note that
     methods are fully qualified and de-aliased prior to checking.
 
+    The executable path is not always the first argument. Functions in the
+    ``os.spawn*`` family take a mode as their first argument, so for those
+    the second argument is examined instead. Relative paths, including
+    those with a leading dot (for example ``./a.out``), are treated as
+    partial paths and reported.
+
     .. code-block:: yaml
 
         shell_injection:
@@ -679,6 +691,10 @@ def start_process_with_partial_path(context, config):
     .. versionchanged:: 1.7.3
         CWE information added
 
+    .. versionchanged:: 1.9.0
+        Check the second argument of the ``os.spawn*`` family and report
+        relative paths with a leading dot.
+
     """
 
     if config and len(context.call_args):
@@ -687,7 +703,13 @@ def start_process_with_partial_path(context, config):
             or context.call_function_name_qual in config["shell"]
             or context.call_function_name_qual in config["no_shell"]
         ):
-            node = context.node.args[0]
+            if context.call_function_name_qual in spawn_family:
+                # os.spawn* take a mode first, the executable path second
+                if len(context.node.args) < 2:
+                    return
+                node = context.node.args[1]
+            else:
+                node = context.node.args[0]
             # some calls take an arg list, check the first part
             if isinstance(node, ast.List) and node.elts:
                 node = node.elts[0]

@@ -293,8 +293,8 @@ class FunctionalTests(testtools.TestCase):
     def test_os_spawn(self):
         """Test for `os.spawn*`."""
         expect = {
-            "SEVERITY": {"UNDEFINED": 0, "LOW": 8, "MEDIUM": 0, "HIGH": 0},
-            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 8, "HIGH": 0},
+            "SEVERITY": {"UNDEFINED": 0, "LOW": 20, "MEDIUM": 0, "HIGH": 0},
+            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 16, "HIGH": 4},
         }
         self.check_example("os-spawn.py", expect)
 
@@ -478,8 +478,8 @@ class FunctionalTests(testtools.TestCase):
     def test_wildcard_injection(self):
         """Test for wildcard injection in shell commands."""
         expect = {
-            "SEVERITY": {"UNDEFINED": 0, "LOW": 10, "MEDIUM": 0, "HIGH": 4},
-            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 5, "HIGH": 9},
+            "SEVERITY": {"UNDEFINED": 0, "LOW": 11, "MEDIUM": 0, "HIGH": 4},
+            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 5, "HIGH": 10},
         }
         self.check_example("wildcard-injection.py", expect)
 
@@ -659,8 +659,8 @@ class FunctionalTests(testtools.TestCase):
     def test_partial_path(self):
         """Test process spawning with partial file paths."""
         expect = {
-            "SEVERITY": {"UNDEFINED": 0, "LOW": 11, "MEDIUM": 0, "HIGH": 0},
-            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 0, "HIGH": 11},
+            "SEVERITY": {"UNDEFINED": 0, "LOW": 14, "MEDIUM": 0, "HIGH": 0},
+            "CONFIDENCE": {"UNDEFINED": 0, "LOW": 0, "MEDIUM": 0, "HIGH": 14},
         }
         self.check_example("partial_path_process.py", expect)
 

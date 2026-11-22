@@ -8,6 +8,7 @@ pop(['ls', '-l'], shell=False)
 pop(['/bin/ls', '-l'], shell=False)
 
 pop('../ls -l', shell=False)
+pop('./a.out', shell=False)
 
 pop('c:\\hello\\something', shell=False)
 pop('c:/hello/something_else', shell=False)
